@@ -4,13 +4,16 @@ import re
 
 Link = namedtuple("Link", ["text", "uri"])
 
-URL_PATTERN: Final = re.compile("\[([^|]+)\|(https?://[^\]]+)\]")
+URL_PATTERN: Final = re.compile("\[([^[|]+)\|[ ]*(https?://[^\]]+)\]")
 
 def extract_rspec_links(description: str) -> Generator[Link, None, None]:
+    """Extract links from an RSPEC."""
     for match in URL_PATTERN.finditer(description):
         yield Link(match.group(1), match.group(2))
 
+
 def extract_links(rspecs):
+    """Extract links from RSPECs."""
     result = {}
     for rspec in rspecs:
         description = rspec["fields"]["description"]

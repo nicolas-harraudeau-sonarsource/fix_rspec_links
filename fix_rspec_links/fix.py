@@ -1,37 +1,27 @@
-from collections import namedtuple
-from typing import List, Generator
-from urllib.parse import quote_plus
+from copy import deepcopy
 
-from bs4 import BeautifulSoup
-import requests
-
-from fix_rspec_links.errors import UnfixableLink
-
-def get_new_cert_link(uri: str, texts: List[str]):
-    if not texts:
-        raise ValueError("CERT links require a text to be fixed. No text is provided.")
-    cert_query = quote_plus(texts[0])
-    search_result = requests.get(f"https://wiki.sei.cmu.edu/confluence/dosearchsite.action?queryString={cert_query}")
-    soup = BeautifulSoup(search_result.text, 'html.parser')
-    result_links = soup.findAll("a", {"class": "search-result-link"})
-    if not result_links:
-        raise UnfixableLink(f'No alternative link found for [{texts[0]}|{uri}].')
-    return f"https://wiki.sei.cmu.edu{result_links[0]['href']}"
+from fix_rspec_links.extract import extract_rspec_links
 
 
+def fix_rspecs(rspecs, new_links):
+    """Fix rspecs by replacing broken links and return the new rspecs."""
+    fixed_rspecs = []
+    for rspec in rspecs:
+        description = rspec["fields"]["description"]
+        if not description:
+            continue
 
-def get_new_link(uri: str, texts: List[str]):
-    if uri.startswith("https://www.securecoding.cert.org/confluence/x"):
-        return get_new_cert_link(uri, texts)
-    raise UnfixableLink(f"No function implemented to fix link {uri}")
+        fixed = False
+        for text, old_uri in extract_rspec_links(description):
+            if old_uri in new_links:
+                new_uri = new_links[old_uri]["new_link"]
+                if new_uri:
+                    description = description.replace(old_uri, new_uri)
+                    fixed = True
 
+        if fixed:
+            new_rspec = deepcopy(rspec)
+            new_rspec["fields"]["description"] = description
+            fixed_rspecs.append(new_rspec)
 
-def fix_links(links):
-    fixed_links = {}
-    for link in links:
-        new_link = get_new_link(link)
-        if new_link:
-            fixed_links[link] = new_link
-        else:
-            fixed_links[link] = None          
-    return fixed_links
+    return fixed_rspecs

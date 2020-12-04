@@ -1,5 +1,3 @@
-import json
-
 import click
 import requests
 
@@ -15,7 +13,8 @@ def fetch_rspecs(host, auth, start=0, end=100, page_size=100):
             "fields": [
                 "summary",
                 "description",
-                "updated"
+                "updated",
+                "customfield_10004"  # Covered languages
             ]
         }
         result = requests.post(
